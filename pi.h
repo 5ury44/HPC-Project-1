@@ -8,64 +8,40 @@
 #include <cstdlib>
 #include <cassert>
 
-typedef struct {
-  float x;
-  float y;
-} Point;
-
-Point *rand_num_gen(long int n) {
-    Point *r_points = (Point *) malloc(sizeof(Point) * n);
-    assert(r_points != NULL);
-
-    for (int i = 0; i < n; i++) {
-        r_points[i].x = rand() / (float)RAND_MAX;
-        r_points[i].y = rand() / (float)RAND_MAX;
-    }
-
-    return r_points;
-}
-
 double pi_calc(long int n) {
     
     // MPI Initialization
-    // MPI_Init(NULL, NULL);
-    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    // MPI_Comm_size(MPI_COMM_WORLD, &size);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    long int size;
-    long int rank;
-
-    long int pt_per_proc = n / size;
+    // Work Distribution
+    long int points_per_proc = n / size;
     long int remainder = n % size;
-    long int l_count = pt_per_proc;
+    long int local_points = points_per_proc + (rank < remainder ? 1 : 0);
 
-    if (rank < remainder) {
-        l_count += 1;
-    }
-
+    // Random Seed Initialization
     srand(time(NULL) + rank);
 
-    long int l_result = 0;
-    Point *points = rand_num_gen(l_count);  // Fix: Ensure `l_count` is used
-
-    for (long int i = 0; i < l_count; i++) {
-        if ((points[i].x * points[i].x + points[i].y * points[i].y) <= 1.0) {  // Fix: Use proper formula for π estimation
-            l_result += 1;
+    // Monte Carlo Simulation
+    long int local_count = 0;
+    for (long int i = 0; i < local_points; i++) {
+        double x = rand() / (double)RAND_MAX;
+        double y = rand() / (double)RAND_MAX;
+        if ((x * x + y * y) <= 1.0) {
+            local_count++;
         }
     }
 
-    free(points);
+    // Reduce Local Counts to Get Global Count
+    long int global_count = 0;
+    MPI_Reduce(&local_count, &global_count, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    long int g_result = 0;
-    MPI_Reduce(&l_result, &g_result, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
-
-    double estimation = 0.0;
-
+    // Compute π Estimation
+    double pi_estimate = 0.0;
     if (rank == 0) {
-        estimation = 4.0 * ((double)g_result / (double)n);  // Fix: Ensure double division
+        pi_estimate = 4.0 * ((double)global_count / (double)n);
     }
 
-    // MPI_Finalize();
-
-    return estimation;
+    return pi_estimate;
 }
