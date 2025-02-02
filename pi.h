@@ -29,9 +29,9 @@ double pi_calc(long int n) {
     
     // MPI Initialization
     int rank, size;
-    MPI_Init(NULL, NULL);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    // MPI_Init(NULL, NULL);
+    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    // MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     long int pt_per_proc = n / size;
     long int remainder = n % size;
@@ -63,7 +63,7 @@ double pi_calc(long int n) {
         estimation = 4.0 * ((double)g_result / (double)n);  // Fix: Ensure double division
     }
 
-    MPI_Finalize();
+    // MPI_Finalize();
 
     return estimation;
 }
